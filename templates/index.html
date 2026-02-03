@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procesador de CxP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.drag-over {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 13px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-info {
+            background: #f0f2ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-info.show {
+            display: flex;
+        }
+
+        .file-name {
+            flex: 1;
+            color: #333;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        .remove-file {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .remove-file:hover {
+            background: #ee5a6f;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+
+        .flash {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .flash.error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .flash.success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .info-box {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .info-box h3 {
+            color: #667eea;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .info-box ul {
+            list-style: none;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .info-box li {
+            padding: 4px 0;
+        }
+
+        .info-box li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 15px;
+            color: #667eea;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Procesador de CxP</h1>
+        <p class="subtitle">Sube tu archivo CSV o Excel y obtén el reporte procesado</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form id="uploadForm" method="POST" action="/upload" enctype="multipart/form-data">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">Haz clic o arrastra tu archivo aquí</div>
+                <div class="upload-hint">CSV, XLS o XLSX (máx. 16MB)</div>
+                <input type="file" name="file" id="fileInput" accept=".csv,.xlsx,.xls" required>
+            </div>
+
+            <div class="file-info" id="fileInfo">
+                <span class="file-name" id="fileName"></span>
+                <button type="button" class="remove-file" id="removeFile">✕</button>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn" disabled>Procesar Archivo</button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Procesando tu archivo...</p>
+            </div>
+        </form>
+
+        <div class="info-box">
+            <h3>¿Qué hace esta herramienta?</h3>
+            <ul>
+                <li>Limpia y organiza datos de CxP</li>
+                <li>Agrupa por proveedor y mes</li>
+                <li>Genera reporte en Excel formateado</li>
+                <li>Calcula totales automáticamente</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const removeFile = document.getElementById('removeFile');
+        const submitBtn = document.getElementById('submitBtn');
+        const uploadForm = document.getElementById('uploadForm');
+        const loading = document.getElementById('loading');
+
+        // Click en área de upload
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // Drag & Drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileInfo();
+            }
+        });
+
+        // Cambio de archivo
+        fileInput.addEventListener('change', updateFileInfo);
+
+        function updateFileInfo() {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                fileName.textContent = file.name;
+                fileInfo.classList.add('show');
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Remover archivo
+        removeFile.addEventListener('click', () => {
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            submitBtn.disabled = true;
+        });
+
+        // Submit del form
+        uploadForm.addEventListener('submit', () => {
+            loading.classList.add('show');
+            submitBtn.disabled = true;
+        });
+    </script>
+</body>
+</html>
