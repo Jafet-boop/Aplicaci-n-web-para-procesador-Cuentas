@@ -491,11 +491,11 @@ def generate_xlsx(df: pd.DataFrame, output_path: str):
 
         row += 3  # espacio entre proveedores
 
-        ws6.column_dimensions["A"].width = 25
-        ws6.column_dimensions["B"].width = 15
-        ws6.column_dimensions["C"].width = 22
+    ws6.column_dimensions["A"].width = 25
+    ws6.column_dimensions["B"].width = 15
+    ws6.column_dimensions["C"].width = 22
 
-        wb.save(output_path)
+    wb.save(output_path)
 
 # -----------------------------
 # 3. Ejecutar reporte
