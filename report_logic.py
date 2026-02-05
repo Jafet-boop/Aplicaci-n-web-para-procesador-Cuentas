@@ -510,7 +510,7 @@ def run_report(
 
     output_path = os.path.join(
         output_dir,
-        f"{base_name}_{today}.xlsx"
+        f"{base_name}{today}.xlsx"
     )
 
     df = load_and_clean(input_path)
