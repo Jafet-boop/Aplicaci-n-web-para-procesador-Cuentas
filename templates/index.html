@@ -227,7 +227,7 @@
 <body>
     <div class="container">
         <h1>📊 Procesador de CxP</h1>
-        <p class="subtitle">Sube tu archivo CSV o Excel y obtén el reporte procesado</p>
+        <p class="subtitle">Sube tu archivo DBF, CSV o Excel y obtén el reporte procesado</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -243,8 +243,8 @@
             <div class="upload-area" id="uploadArea">
                 <div class="upload-icon">📁</div>
                 <div class="upload-text">Haz clic o arrastra tu archivo aquí</div>
-                <div class="upload-hint">CSV, XLS o XLSX (máx. 16MB)</div>
-                <input type="file" name="file" id="fileInput" accept=".csv,.xlsx,.xls" required>
+                <div class="upload-hint">DBF, CSV, XLS o XLSX (máx. 16MB)</div>
+                <input type="file" name="file" id="fileInput" accept=".dbf,.csv,.xlsx,.xls" required>
             </div>
 
             <div class="file-info" id="fileInfo">
@@ -324,9 +324,31 @@
         });
 
         // Submit del form
-        uploadForm.addEventListener('submit', () => {
+        uploadForm.addEventListener('submit', (e) => {
             loading.classList.add('show');
             submitBtn.disabled = true;
+            
+            // Ocultar el loading después de 3 segundos (tiempo estimado de descarga)
+            setTimeout(() => {
+                loading.classList.remove('show');
+                submitBtn.disabled = false;
+                fileInput.value = '';
+                fileInfo.classList.remove('show');
+            }, 3000);
+        });
+
+        // Detectar cuando termina la descarga (método alternativo)
+        let checkInterval;
+        uploadForm.addEventListener('submit', () => {
+            checkInterval = setInterval(() => {
+                // Verificar si hay error o si terminó
+                const hasError = document.querySelector('.flash.error');
+                if (hasError) {
+                    clearInterval(checkInterval);
+                    loading.classList.remove('show');
+                    submitBtn.disabled = false;
+                }
+            }, 500);
         });
     </script>
 </body>
