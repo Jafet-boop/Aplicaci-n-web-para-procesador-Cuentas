@@ -10,7 +10,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
 app.config['UPLOAD_FOLDER'] = 'input'
 app.config['OUTPUT_FOLDER'] = 'output'
 
-ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'xls'}
+ALLOWED_EXTENSIONS = {'dbf','csv', 'xlsx', 'xls'}
 
 # Crear carpetas si no existen
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -70,7 +70,7 @@ def upload_file():
                 os.remove(filepath)
             return redirect(url_for('index'))
     else:
-        flash('Tipo de archivo no permitido. Solo se aceptan CSV, XLS y XLSX', 'error')
+        flash('Tipo de archivo no permitido. Solo se aceptan DBF ,CSV, XLS y XLSX', 'error')
         return redirect(url_for('index'))
 
 @app.route('/health')
