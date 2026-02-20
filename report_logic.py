@@ -215,6 +215,11 @@ def generate_xlsx(df: pd.DataFrame, output_path: str):
         aggfunc="sum",
         fill_value=0
     )
+    columnas_ordenadas = sorted(
+    [c for c in pivot.columns],
+    key=lambda x: pd.to_datetime(x, format="%b-%y")
+    )
+    pivot = pivot[columnas_ordenadas]
 
     pivot["SALDO TOTAL"] = pivot.sum(axis=1)
 
@@ -270,19 +275,35 @@ def generate_xlsx(df: pd.DataFrame, output_path: str):
 
     headers = [
         "PROVEEDOR",
+        # Rangos por días
         "0-30 días",
         "31-60 días",
         "61-90 días",
         "+90 días",
-        "SALDO TOTAL"
+        "SALDO TOTAL (días)",
+        # Rangos por semanas
+        "Sem 1 (0-7d)",
+        "Sem 2 (8-14d)",
+        "Sem 3 (15-21d)",
+        "Sem 4 (22-28d)",
+        "+4 Sem (+28d)",
+        "SALDO TOTAL (sem)",
     ]
+
     # Colores
-    fill_header = PatternFill("solid", fgColor="D9EAD3")   # verde claro
-    fill_30 = PatternFill("solid", fgColor="E2F0D9")       # verde suave
-    fill_60 = PatternFill("solid", fgColor="FFF2CC")       # amarillo
-    fill_90 = PatternFill("solid", fgColor="FCE5CD")       # naranja
-    fill_90p = PatternFill("solid", fgColor="F4CCCC")     # rojo
-    fill_total = PatternFill("solid", fgColor="B6D7A8")    # verde fuerte
+    fill_header     = PatternFill("solid", fgColor="D9EAD3")  # verde claro
+    fill_30         = PatternFill("solid", fgColor="E2F0D9")  # verde suave
+    fill_60         = PatternFill("solid", fgColor="FFF2CC")  # amarillo
+    fill_90         = PatternFill("solid", fgColor="FCE5CD")  # naranja
+    fill_90p        = PatternFill("solid", fgColor="F4CCCC")  # rojo
+    fill_total      = PatternFill("solid", fgColor="B6D7A8")  # verde fuerte
+    # Colores semanas (azules)
+    fill_sem1       = PatternFill("solid", fgColor="DAEEF3")  # azul muy suave
+    fill_sem2       = PatternFill("solid", fgColor="BDD7EE")  # azul suave
+    fill_sem3       = PatternFill("solid", fgColor="9DC3E6")  # azul medio
+    fill_sem4       = PatternFill("solid", fgColor="6FA8DC")  # azul
+    fill_sem_plus   = PatternFill("solid", fgColor="4472C4")  # azul fuerte
+    fill_total_sem  = PatternFill("solid", fgColor="1F4E79")  # azul oscuro
 
     row = 3
 
@@ -300,63 +321,77 @@ def generate_xlsx(df: pd.DataFrame, output_path: str):
     df_aging = df.copy()
     df_aging["DIAS_VENCIDO"] = (hoy - df_aging["FECHAVTO"]).dt.days
 
-    def rango(dias):
-        if dias <= 30:
-            return "0-30"
-        elif dias <= 60:
-            return "31-60"
-        elif dias <= 90:
-            return "61-90"
-        else:
-            return "+90"
+    def rango_dias(dias):
+        if dias <= 30:  return "0-30"
+        elif dias <= 60: return "31-60"
+        elif dias <= 90: return "61-90"
+        else:            return "+90"
 
-    df_aging["RANGO"] = df_aging["DIAS_VENCIDO"].apply(rango)
+    def rango_semanas(dias):
+        if dias <= 7:   return "0-7"
+        elif dias <= 14: return "8-14"
+        elif dias <= 21: return "15-21"
+        elif dias <= 28: return "22-28"
+        else:            return "+28"
 
-    pivot = df_aging.pivot_table(
-        index="PROVEEDOR",
-        columns="RANGO",
-        values="SALDO",
-        aggfunc="sum",
-        fill_value=0
+    df_aging["RANGO_DIAS"] = df_aging["DIAS_VENCIDO"].apply(rango_dias)
+    df_aging["RANGO_SEM"]  = df_aging["DIAS_VENCIDO"].apply(rango_semanas)
+
+    pivot_dias = df_aging.pivot_table(
+        index="PROVEEDOR", columns="RANGO_DIAS",
+        values="SALDO", aggfunc="sum", fill_value=0
+    )
+    pivot_sem = df_aging.pivot_table(
+        index="PROVEEDOR", columns="RANGO_SEM",
+        values="SALDO", aggfunc="sum", fill_value=0
     )
 
     for col in ["0-30", "31-60", "61-90", "+90"]:
-        if col not in pivot.columns:
-            pivot[col] = 0
+        if col not in pivot_dias.columns: pivot_dias[col] = 0
 
-    pivot = pivot[["0-30", "31-60", "61-90", "+90"]]
-    pivot["SALDO TOTAL"] = pivot.sum(axis=1)
+    for col in ["0-7", "8-14", "15-21", "22-28", "+28"]:
+        if col not in pivot_sem.columns:  pivot_sem[col]  = 0
 
-    start_data_row = row
+    pivot_dias = pivot_dias[["0-30", "31-60", "61-90", "+90"]]
+    pivot_sem  = pivot_sem[["0-7", "8-14", "15-21", "22-28", "+28"]]
 
-    for proveedor, data in pivot.iterrows():
-        ws4.cell(row=row, column=1, value=proveedor)
-        ws4.cell(row=row, column=1).border = border
+    pivot_dias["TOTAL_DIAS"] = pivot_dias.sum(axis=1)
+    pivot_sem["TOTAL_SEM"]   = pivot_sem.sum(axis=1)
 
-        col = 2
-        for val in data:
-            c = ws4.cell(row=row, column=col, value=val)
+    pivot_full = pivot_dias.join(pivot_sem, how="outer").fillna(0)
+
+    col_fills = {
+        2: fill_30,
+        3: fill_60,
+        4: fill_90,
+        5: fill_90p,
+        6: fill_total,
+        7: fill_sem1,
+        8: fill_sem2,
+        9: fill_sem3,
+        10: fill_sem4,
+        11: fill_sem_plus,
+        12: fill_total_sem,
+    }
+
+    dark_cols = {12}
+
+    for proveedor, data in pivot_full.iterrows():
+        ws4.cell(row=row, column=1, value=proveedor).border = border
+
+        for col_idx, val in enumerate(data, start=2):
+            c = ws4.cell(row=row, column=col_idx, value=val)
             c.alignment = right
             c.border = border
-
-            if col == 2:
-                c.fill = fill_30
-            elif col == 3:
-                c.fill = fill_60
-            elif col == 4:
-                c.fill = fill_90
-            elif col == 5:
-                c.fill = fill_90p
-            else:
-                c.fill = fill_total
-
-            col += 1
+            c.fill = col_fills.get(col_idx, fill_30)
+            if col_idx in dark_cols:
+                c.font = Font(color="FFFFFF")
 
         row += 1
 
     ws4.column_dimensions["A"].width = 35
-    for col in ["B", "C", "D", "E", "F"]:
-        ws4.column_dimensions[col].width = 18
+    for i, col_letter in enumerate(["B","C","D","E","F","G","H","I","J","K","L"], start=1):
+        ws4.column_dimensions[col_letter].width = 18
     
 # ======================================================
 # HOJA 5 – TOP 10 PROVEEDORES
@@ -512,7 +547,7 @@ def run_report(
         output_dir,
         f"{base_name}{today}.xlsx"
     )
-
+  
     df = load_and_clean(input_path)
     generate_xlsx(df, output_path)
 
