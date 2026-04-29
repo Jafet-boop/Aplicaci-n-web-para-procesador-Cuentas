@@ -61,10 +61,6 @@ PYTHON_TEC/
 - **openpyxl**: Manipulación de archivos Excel
 - **gunicorn**: Servidor WSGI para producción
 
-## 🤝 Contribuciones
-
-Si encuentras bugs o tienes sugerencias, siéntete libre de crear un issue o pull request.
-
 ## 📄 Licencia
 
 Proyecto de uso interno/personal.
